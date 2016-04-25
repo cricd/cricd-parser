@@ -1,0 +1,8 @@
+{
+    "eventstore": {
+        "eventstore_ip": "192.168.99.100",
+        "eventstore_port": "2113",
+        "stream_name": "cricket_events_v1"
+    },
+    "game_path": "t20s/967081.yaml"
+}
