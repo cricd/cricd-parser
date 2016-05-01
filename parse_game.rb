@@ -3,8 +3,8 @@ require 'bundler/setup'
 
 require 'httparty'
 require 'yaml'
-require 'SecureRandom'
-require 'Date'
+require 'securerandom'
+require 'date'
 require 'json'
 require 'http_eventstore'
 require 'pp'
@@ -13,7 +13,7 @@ require_relative 'properties.rb'
 
 # TODO:
 # - Change the event types to be the same as the spec
-
+# - Fix the issue where legbyes are 0 runs
 
 def snake_to_camel(string)
   str_array = string.split("_")
@@ -345,7 +345,7 @@ innings.each_with_index do |innings_info, index|
         # If it's a wicket change the event type
 
         if x.has_key?("wicket")
-          event_type = {"eventType" => x["wicket"]["kind"]}
+          event_type = {"eventType" => snake_to_camel(x["wicket"]["kind"])}
         # If it had fielders make sure to include them
         if x["wicket"].has_key?("fielders")
           found_fielder = entity_source.get_player(x["wicket"]["fielders"].first)
@@ -359,14 +359,14 @@ innings.each_with_index do |innings_info, index|
 
         # If it's extras, make sure the delivery is the right type
         elsif x.has_key?("extras")
-          event_type = {"eventType" =>  x["extras"].keys.first}
+          event_type = {"eventType" =>  snake_to_camel(x["extras"].keys.first)}
         # Otherwise it's a delivery
         else
           event_type = {"eventType" => "delivery"}
         end
 
         # Set the number of runs scored by the batsman, and fake the timestamp
-        runs = {"runs" => x["runs"]["batsman"]}
+        runs = {"runs" => (x["runs"]["batsman"]}
         timestamp = {"timestamp" => DateTime.now.iso8601}
 
         # Create a new event with the data parsed
