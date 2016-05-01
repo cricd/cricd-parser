@@ -366,7 +366,7 @@ innings.each_with_index do |innings_info, index|
         end
 
         # Set the number of runs scored by the batsman, and fake the timestamp
-        runs = {"runs" => (x["runs"]["batsman"]}
+        runs = {"runs" => x["runs"]["batsman"]}
         timestamp = {"timestamp" => DateTime.now.iso8601}
 
         # Create a new event with the data parsed
