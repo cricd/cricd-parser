@@ -33,8 +33,9 @@ class CricketEntitySource
   def create_team(name)
     response = HTTParty.post("#{@url}/teams",
                   :body => {"name" => "#{name}"}.to_json,
-                  :headers => { 'Content-Type' => 'application/json'}
-                 )
+                  :headers => { 'Content-Type' => 'application/json'},
+                  :timeout => 1
+                  )
     case response.code
     when 200...299
       return JSON.parse(response.body)
@@ -53,8 +54,9 @@ class CricketEntitySource
   def get_team(name)
     response = HTTParty.get("#{@url}/teams",
                              :query => {'name' => name},
-                             :headers => { 'Content-Type' => 'application/json'}
-                            )
+                             :headers => { 'Content-Type' => 'application/json'},
+                             :timeout => 1
+                           )
     case response.code
     when 200...299
       return JSON.parse(response.body)
@@ -77,7 +79,8 @@ class CricketEntitySource
                                          'numberOfInnings' => number_of_innings,
                                          'limitedOvers' => limited_overs,
                                          'startDate' => start_date},
-                              :headers => { 'Content-Type' => 'application/json'}
+                              :headers => { 'Content-Type' => 'application/json'},
+                              :timeout => 1
                              )
       case response.code
       when 200...299
@@ -101,7 +104,8 @@ class CricketEntitySource
                                           'numberOfInnings' => number_of_innings,
                                           'limitedOvers' => limited_overs,
                                           'startDate' => start_date}.to_json,
-                               :headers => { 'Content-Type' => 'application/json'}
+                               :headers => { 'Content-Type' => 'application/json'},
+                               :timeout => 1
                               )
     case response.code
     when 200...299
@@ -121,7 +125,8 @@ class CricketEntitySource
   def create_player(name)
   response = HTTParty.post("#{@url}/players",
                            :body => {"name" => "#{name}"}.to_json,
-                           :headers => { 'Content-Type' => 'application/json'}
+                           :headers => { 'Content-Type' => 'application/json'},
+                           :timeout => 1
                           )
   case response.code
   when 200...299
@@ -141,7 +146,8 @@ class CricketEntitySource
   def get_player(name)
     response = HTTParty.get("#{@url}/players",
                             :query => {'name' => name},
-                            :headers => { 'Content-Type' => 'application/json'}
+                            :headers => { 'Content-Type' => 'application/json'},
+                            :timeout => 1
                            )
     case response.code
     when 200...299
