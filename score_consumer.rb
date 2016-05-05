@@ -2,9 +2,9 @@ require 'rubygems'
 require 'bundler/setup'
 
 require 'yaml'
-require 'SecureRandom'
-require 'Date'
-require 'JSON'
+require 'securerandom'
+require 'date'
+require 'json'
 require 'http_eventstore'
 require 'pp'
 require_relative 'properties.rb'
@@ -20,8 +20,8 @@ all_properties = properties.get_properties()
 
 # Set up EventStore
 client = HttpEventstore::Connection.new do |config|
-  config.endpoint = all_properties["eventstore"]["eventstore_ip"]
-  config.port = all_properties["eventstore"]["eventstore_port"]
+  config.endpoint = all_properties["eventstore"]["ip"]
+  config.port = all_properties["eventstore"]["port"]
   config.page_size = '20'
 end
 stream_name = all_properties["eventstore"]["stream_name"]
