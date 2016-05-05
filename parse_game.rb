@@ -366,13 +366,19 @@ innings.each_with_index do |innings_info, index|
         # If it's extras, make sure the delivery is the right type
         elsif x.has_key?("extras")
           event_type = {"eventType" =>  snake_to_camel(x["extras"].keys.first)}
+
+          # Runs should be the physical runs taken, therefore it should be the score attributed to the batsman. Unless it's byes/legbyes which are counted as extras
+          if x["extras"].keys.first == "legbyes" || x["extras"].keys.first == "byes"
+            runs = {"runs" => x["runs"]["extras"]}
+          else
+            runs = {"runs" => x["runs"]["batsman"]}
+          end
         # Otherwise it's a delivery
         else
           event_type = {"eventType" => "delivery"}
         end
 
         # Set the number of runs scored by the batsman, and fake the timestamp
-        runs = {"runs" => x["runs"]["batsman"]}
         timestamp = {"timestamp" => DateTime.now.iso8601}
 
         # Create a new event with the data parsed
