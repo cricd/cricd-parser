@@ -36,29 +36,40 @@ batsmen = {}
  
 events.each do |event|
   batsman = event.data["batsmen"]["striker"]
-  # If we've seen this batsman before we're going to add to his stats
-  if batsmen.has_key?(batsman["id"])
-    batsmen[batsman["id"]].runs += event["data"]["runs"].to_i
-    batsmen[batsman["id"]].balls += 1 
-    batsmen[batsman["id"]].strike_rate =  100 * batsmen[batsman["id"]].runs.to_f / batsmen[batsman["id"]].balls.to_f 
-   # Otherwise we're going to create the score
-  else
-    batsmen[batsman["id"]] = Struct::Batsman_score.new(
-      event["data"]["batsmen"]["striker"]["name"],
-      event["data"]["runs"].to_i,
-      1,
-      "not out",
-      100 * (event["data"]["runs"].to_f)
-    )
-  end
   # If it's a wicket update how he got out
   if $wickets.include?(event["data"]["eventType"])
-    batsmen[batsman["id"]].wicket = event["data"]["eventType"]
+    if batsman.has_key?(batsman["id"])
+      batsmen[batsman["id"]].wicket = event["data"]["eventType"]
+    else
+      batsmen[batsman["id"]] = Struct::Batsman_score.new(
+        event["data"]["batsmen"]["striker"]["name"],
+        0,
+        1,
+        event["data"]["eventType"],
+        0
+      )
+    end
+  else
+    # If we've seen this batsman before we're going to add to his stats
+    if batsmen.has_key?(batsman["id"])
+      batsmen[batsman["id"]].runs += event["data"]["runs"].to_i
+      batsmen[batsman["id"]].balls += 1 
+      batsmen[batsman["id"]].strike_rate =  100 * batsmen[batsman["id"]].runs.to_f / batsmen[batsman["id"]].balls.to_f 
+    # Otherwise we're going to create the score
+    else
+      batsmen[batsman["id"]] = Struct::Batsman_score.new(
+        event["data"]["batsmen"]["striker"]["name"],
+        event["data"]["runs"].to_i,
+        1,
+        "not out",
+        100 * (event["data"]["runs"].to_f)
+      )
+    end
   end
 end
 
-batsmen.each do |x|
-  pp x
+batsmen.each do |key,value|
+  puts "#{value.name} scored #{value.runs} off #{value.balls} with a strike rate #{value.strike_rate.round(2)} and was #{value.wicket}"
 end
 
 
