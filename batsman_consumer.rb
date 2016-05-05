@@ -10,6 +10,8 @@ require 'http_eventstore'
 require 'pp'
 require_relative 'properties.rb'
 
+$wickets = ["bowled", "caught","caughtAndBowled", "lbw", "stumped", "run out", "retiredHurt", "hitWicket", "obstructingTheField", "hitTheBallWwice", "handledTheBall", "timedOut"]
+
 # Get properties
 properties = Properties.new
 all_properties = properties.get_properties()
@@ -27,15 +29,36 @@ stream_name = all_properties["eventstore"]["stream_name"]
 events = client.read_all_events_forward(stream_name)
 
 # Create a struct to define what a batsman score looks like
-Struct.new("Batsman_score", :runs, :balls, :strike_rate)
+Struct.new("Batsman_score", :name, :runs, :balls, :wicket, :strike_rate)
 
 # Create an array for each batsmans score
-batsmen = []
-
-
+batsmen = {}
  
 events.each do |event|
-  pp event
+  batsman = event.data["batsmen"]["striker"]
+  # If we've seen this batsman before we're going to add to his stats
+  if batsmen.has_key?(batsman["id"])
+    batsmen[batsman["id"]].runs += event["data"]["runs"].to_i
+    batsmen[batsman["id"]].balls += 1 
+    batsmen[batsman["id"]].strike_rate =  100 * batsmen[batsman["id"]].runs.to_f / batsmen[batsman["id"]].balls.to_f 
+   # Otherwise we're going to create the score
+  else
+    batsmen[batsman["id"]] = Struct::Batsman_score.new(
+      event["data"]["batsmen"]["striker"]["name"],
+      event["data"]["runs"].to_i,
+      1,
+      "not out",
+      100 * (event["data"]["runs"].to_f)
+    )
+  end
+  # If it's a wicket update how he got out
+  if $wickets.include?(event["data"]["eventType"])
+    batsmen[batsman["id"]].wicket = event["data"]["eventType"]
+  end
+end
+
+batsmen.each do |x|
+  pp x
 end
 
 

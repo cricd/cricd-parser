@@ -10,7 +10,7 @@ require 'pp'
 require_relative 'properties.rb'
 
 # Wickets
-$wickets = ["bowled", "caught","caught and bowled", "lbw", "stumped", "run out", "retired hurt", "hit wicket", "obstructing the field", "hit the ball twice", "handled the ball", "timed out"]
+$wickets = ["bowled", "caught","caughtAndBowled", "lbw", "stumped", "run out", "retiredHurt", "hitWicket", "obstructingTheField", "hitTheBallWwice", "handledTheBall", "timedOut"]
 
 
 # Get properties
