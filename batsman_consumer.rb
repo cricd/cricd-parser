@@ -9,13 +9,39 @@ require 'json'
 require 'http_eventstore'
 require 'pp'
 require_relative 'properties.rb'
+require_relative 'cricket_event.rb'
 
-$wickets = ["bowled", "caught","caughtAndBowled", "lbw", "stumped", "run out", "retiredHurt", "hitWicket", "obstructingTheField", "hitTheBallWwice", "handledTheBall", "timedOut"]
+
+class CricketBatsmanScore
+  def initialize(id, name)
+    @id = id
+    @name = name
+    @runs = 0
+    @balls = 0
+    @wicket = "not out"
+    @strike_rate = 0
+  end
+
+  def update(event)
+    if event.is_wicket?
+      @wicket = event.instance_variable_get(:@type)
+    else
+      @runs += event.instance_variable_get(:@runs).to_i
+      @balls += event.instance_variable_get(:@ball).to_i
+      @strike_rate = 100* @runs.to_f / @balls.to_f
+    end
+  end
+
+  def to_s()
+   puts "#{@name} scored #{@runs} off #{@balls} with a strike rate of #{@strike_rate.round(2)} and was #{@wicket}"
+  end
+
+end
+
 
 # Get properties
 properties = Properties.new
 all_properties = properties.get_properties()
-
 
 # Set up EventStore
 client = HttpEventstore::Connection.new do |config|
@@ -28,48 +54,38 @@ stream_name = all_properties["eventstore"]["stream_name"]
 # Read all the events from the stream
 events = client.read_all_events_forward(stream_name)
 
-# Create a struct to define what a batsman score looks like
-Struct.new("Batsman_score", :name, :runs, :balls, :wicket, :strike_rate)
-
 # Create an array for each batsmans score
 batsmen = {}
- 
 events.each do |event|
+  cricket_event = CricketEvent.new(
+    event.data["match"],
+    event.data["eventType"],
+    event.data["timestamp"],
+    event.data["ball"]["battingTeam"],
+    event.data["ball"]["fieldingTeam"],
+    event.data["ball"]["innings"],
+    event.data["ball"]["over"],
+    event.data["ball"]["ball"],
+    event.data["runs"],
+    event.data["batsmen"]["striker"],
+    event.data["batsmen"]["nonStriker"],
+    event.data["bowler"],
+    event.data["fielder"]
+  )
+
   batsman = event.data["batsmen"]["striker"]
-  # If it's a wicket update how he got out
-  if $wickets.include?(event["data"]["eventType"])
-    if batsman.has_key?(batsman["id"])
-      batsmen[batsman["id"]].wicket = event["data"]["eventType"]
-    else
-      batsmen[batsman["id"]] = Struct::Batsman_score.new(
-        event["data"]["batsmen"]["striker"]["name"],
-        0,
-        1,
-        event["data"]["eventType"],
-        0
-      )
-    end
-  else
-    # If we've seen this batsman before we're going to add to his stats
-    if batsmen.has_key?(batsman["id"])
-      batsmen[batsman["id"]].runs += event["data"]["runs"].to_i
-      batsmen[batsman["id"]].balls += 1 
-      batsmen[batsman["id"]].strike_rate =  100 * batsmen[batsman["id"]].runs.to_f / batsmen[batsman["id"]].balls.to_f 
-    # Otherwise we're going to create the score
-    else
-      batsmen[batsman["id"]] = Struct::Batsman_score.new(
-        event["data"]["batsmen"]["striker"]["name"],
-        event["data"]["runs"].to_i,
-        1,
-        "not out",
-        100 * (event["data"]["runs"].to_f)
-      )
-    end
+  unless batsmen.has_key?(batsman["id"])
+    batsmen[batsman["id"]] = CricketBatsmanScore.new(
+      batsman["id"],
+      batsman["name"]
+    )
   end
+  batsmen[batsman["id"]].update(cricket_event)
+
 end
 
-batsmen.each do |key,value|
-  puts "#{value.name} scored #{value.runs} off #{value.balls} with a strike rate #{value.strike_rate.round(2)} and was #{value.wicket}"
+batsmen.each do |key, value|
+  puts value.to_s
 end
 
 

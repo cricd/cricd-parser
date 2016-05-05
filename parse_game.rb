@@ -9,7 +9,8 @@ require 'json'
 require 'http_eventstore'
 require 'pp'
 require_relative 'properties.rb'
-
+require_relative 'cricket_event.rb'
+require_relative 'cricket_entity_source.rb'
 
 # TODO:
 # - Change the event types to be the same as the spec
@@ -23,214 +24,7 @@ def snake_to_camel(string)
 end
 
 
-class CricketEntitySource
-  def initialize(ip, port)
-    @ip = ip
-    @port = port
-    @url = "http://#{@ip}:#{port}"
-  end
 
-  def create_team(name)
-    response = HTTParty.post("#{@url}/teams",
-                  :body => {"name" => "#{name}"}.to_json,
-                  :headers => { 'Content-Type' => 'application/json'},
-                  :timeout => 1
-                  )
-    case response.code
-    when 200...299
-      return JSON.parse(response.body)
-    when 400...500
-      puts "Failed to create team with a #{response.code} code - #{response.body}"
-      return nil
-    when 500...600
-      puts "Failed to create a team with a #{response.code} code"
-      return nil
-    else
-      puts "Unknown response #{response.code} code"
-      return nil
-    end
-  end
-
-  def get_team(name)
-    response = HTTParty.get("#{@url}/teams",
-                             :query => {'name' => name},
-                             :headers => { 'Content-Type' => 'application/json'},
-                             :timeout => 1
-                           )
-    case response.code
-    when 200...299
-      return JSON.parse(response.body)
-    when 400...500
-      puts "Failed to get team with a #{response.code} code - #{response.body}"
-      return nil
-    when 500...600
-      puts "Failed to get team with a #{response.code} code"
-      return nil
-    else
-      puts "Unknown response #{response.code} code"
-      return nil
-    end
-  end
-
-  def get_match(home_team, away_team, number_of_innings, limited_overs, start_date)
-      response = HTTParty.get("#{@url}/matches",
-                              :query => {'homeTeam' => home_team,
-                                         'awayTeam' => away_team,
-                                         'numberOfInnings' => number_of_innings,
-                                         'limitedOvers' => limited_overs,
-                                         'startDate' => start_date},
-                              :headers => { 'Content-Type' => 'application/json'},
-                              :timeout => 1
-                             )
-      case response.code
-      when 200...299
-        return JSON.parse(response.body)
-      when 400...500
-        puts "Failed to get match with a #{response.code} code - #{response}"
-        return nil
-      when 500...600
-        puts "Failed to get match with a #{response.code} code"
-        return nil
-      else
-        puts "Unknown response #{response.code} code"
-        return nil
-      end
-    end
-
-  def create_match(home_team, away_team, number_of_innings, limited_overs, start_date)
-    response = HTTParty.post("#{@url}/matches",
-                               :body => {'homeTeam' => home_team,
-                                          'awayTeam' => away_team,
-                                          'numberOfInnings' => number_of_innings,
-                                          'limitedOvers' => limited_overs,
-                                          'startDate' => start_date}.to_json,
-                               :headers => { 'Content-Type' => 'application/json'},
-                               :timeout => 1
-                              )
-    case response.code
-    when 200...299
-        return JSON.parse(response.body)
-      when 400...500
-        puts "Failed to get match with a #{response.code} code"
-        return nil
-      when 500...600
-        puts "Failed to get match with a #{response.code} code"
-        return nil
-      else
-        puts "Unknown response #{response.code} code"
-        return nil
-      end
-    end
-
-  def create_player(name)
-  response = HTTParty.post("#{@url}/players",
-                           :body => {"name" => "#{name}"}.to_json,
-                           :headers => { 'Content-Type' => 'application/json'},
-                           :timeout => 1
-                          )
-  case response.code
-  when 200...299
-    return JSON.parse(response.body)
-  when 400...500
-    puts "Failed to create team with a #{response.code} code - #{response.body}"
-    return nil
-  when 500...600
-    puts "Failed to create a team with a #{response.code} code"
-    return nil
-  else
-    puts "Unknown response #{response.code} code"
-    return nil
-  end
-  end
-
-  def get_player(name)
-    response = HTTParty.get("#{@url}/players",
-                            :query => {'name' => name},
-                            :headers => { 'Content-Type' => 'application/json'},
-                            :timeout => 1
-                           )
-    case response.code
-    when 200...299
-      return JSON.parse(response.body)
-    when 400...500
-      puts "Failed to get team with a #{response.code} code - #{response.body}"
-      return nil
-    when 500...600
-      puts "Failed to get team with a #{response.code} code"
-      return nil
-    else
-      puts "Unknown response #{response.code} code"
-      return nil
-    end
-  end
-end
-
-
-
-
-class CricketEvent
-  def initialize(match, type, timestamp, batting_team, fielding_team, innings, over, ball, runs, striker, non_striker, bowler, fielder)
-    @match = match
-    @type = type
-    @timestamp = timestamp
-    @batting_team = batting_team
-    @fielding_team = fielding_team
-    @innings = innings
-    @over = over
-    @ball = ball
-    @runs = runs
-    @striker = striker
-    @non_striker = non_striker
-    @bowler = bowler
-    @fielder = fielder
-  end
-
-  def to_string()
-     output = 
-      {
-          "match" => "#{@match["match"]}",
-          "eventType" => "#{@type["eventType"]}",
-          "timestamp"=> "#{@timestamp["timestamp"]}",
-          "ball" => {
-              "battingTeam" => {
-                  "id"=> "#{@batting_team["id"]}",
-                  "name"=> "#{@batting_team["name"]}"
-              },
-              "fieldingTeam"=> {
-                  "id"=> "#{@fielding_team["id"]}",
-                  "name"=> "#{@fielding_team["name"]}"
-              },
-              "innings"=> "#{@innings["innings"]}",
-              "over"=> "#{@over["over"]}",
-              "ball"=> "#{@ball["ball"]}"
-          },
-          "runs"=> "#{@runs["runs"]}",
-          "batsmen"=> {
-              "striker"=> {
-                "id"=> "#{@striker["id"]}",
-                "name"=> "#{@striker["name"]}"
-              },
-              "nonStriker"=> {
-                "id"=> "#{@non_striker["id"]}",
-                "name"=> "#{@non_striker["name"]}"
-              }
-          },
-          "bowler"=> {
-                "id"=> "#{@bowler["id"]}",
-                "name"=> "#{@bowler["name"]}"
-          }
-      }
-
-      if (@type["eventType"] == "run out" or @type["eventType"] == "stumped" or @type["eventType"] == "caught")
-        output["fielder"] = {
-             "id" => "#{@fielder["id"]}",
-             "name"=> "#{@fielder["name"]}"
-           }
-      end
-
-    return output
-  end
-end
 
 # Get properties
 properties = Properties.new
@@ -403,7 +197,7 @@ innings.each_with_index do |innings_info, index|
         )
 
         # Create the string of the event and push to ES
-        event = event.to_string()
+        event = event.to_s()
 
         # Push to event store
         stream_name = all_properties["eventstore"]["stream_name"]
