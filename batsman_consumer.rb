@@ -11,6 +11,7 @@ require 'pp'
 require_relative 'properties.rb'
 require_relative 'cricket_event.rb'
 
+#TODO fix the wide and noball rules
 
 class CricketBatsmanScore
   def initialize(id, name)
@@ -22,7 +23,7 @@ class CricketBatsmanScore
     @strike_rate = 0
   end
 
-  def update(event)
+  def update_from_event(event)
     if event.is_wicket?
       @wicket = event.instance_variable_get(:@type)
     else
@@ -39,17 +40,15 @@ class CricketBatsmanScore
 end
 
 
-# Get properties
-properties = Properties.new
-all_properties = properties.get_properties()
 
 # Set up EventStore
+es_config = Properties.get("eventstore")
 client = HttpEventstore::Connection.new do |config|
-  config.endpoint = all_properties["eventstore"]["ip"]
-  config.port = all_properties["eventstore"]["port"]
+  config.endpoint = es_config["ip"]
+  config.port = es_config["port"]
   config.page_size = '20'
 end
-stream_name = all_properties["eventstore"]["stream_name"]
+stream_name = es_config["stream_name"]
 
 # Read all the events from the stream
 events = client.read_all_events_forward(stream_name)
@@ -57,35 +56,22 @@ events = client.read_all_events_forward(stream_name)
 # Create an array for each batsmans score
 batsmen = {}
 events.each do |event|
-  cricket_event = CricketEvent.new(
-    event.data["match"],
-    event.data["eventType"],
-    event.data["timestamp"],
-    event.data["ball"]["battingTeam"],
-    event.data["ball"]["fieldingTeam"],
-    event.data["ball"]["innings"],
-    event.data["ball"]["over"],
-    event.data["ball"]["ball"],
-    event.data["runs"],
-    event.data["batsmen"]["striker"],
-    event.data["batsmen"]["nonStriker"],
-    event.data["bowler"],
-    event.data["fielder"]
-  )
-
+  cricket_event = CricketEvent.new(event)
   batsman = event.data["batsmen"]["striker"]
+  # Create the batsman in the hash if it doesn't exit
   unless batsmen.has_key?(batsman["id"])
     batsmen[batsman["id"]] = CricketBatsmanScore.new(
       batsman["id"],
-      batsman["name"]
-    )
+      batsman["name"])
   end
-  batsmen[batsman["id"]].update(cricket_event)
+  # Update the bastman score
+  batsmen[batsman["id"]].update_from_event(cricket_event)
 
 end
 
-batsmen.each do |key, value|
-  puts value.to_s
+# Print to screen
+batsmen.each do |key, batsman_score|
+  puts batsman_score.to_s
 end
 
 

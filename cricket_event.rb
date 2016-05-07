@@ -1,20 +1,37 @@
 
 class CricketEvent
-  def initialize(match, type, timestamp, batting_team, fielding_team, innings, over, ball, runs, striker, non_striker, bowler, fielder)
-    @match = match
-    @type = type
-    @timestamp = timestamp
-    @batting_team = batting_team
-    @fielding_team = fielding_team
-    @innings = innings
-    @over = over
-    @ball = ball
-    @runs = runs
-    @striker = striker
-    @non_striker = non_striker
-    @bowler = bowler
-    @fielder = fielder
-  end
+  def initialize(event, options)
+    if event.nil?
+    @match  = options["match"]
+    @type  = options["type"]
+    @timestamp  = options["timestamp"]
+    @batting_team  = options["batting_team"]
+    @fielding_team  = options["fielding_team"]
+    @innings  = options["innings"]
+    @over  = options["over"]
+    @ball  = options["ball"]
+    @runs  = options["runs"]
+    @striker  = options["striker"]
+    @non_striker  = options["non_striker"]
+    @bowler  = options["bowler"]
+    @fielder  = options["fielder"]
+    else
+      @match = event.data["match"],
+      @type = event.data["eventType"],
+      @timestamp = event.data["timestamp"],
+      @batting_team = event.data["ball"]["battingTeam"],
+      @fielding_team = event.data["ball"]["fieldingTeam"],
+      @innings = event.data["ball"]["innings"],
+      @over = event.data["ball"]["over"],
+      @ball = event.data["ball"]["ball"],
+      @runs = event.data["runs"],
+      @striker = event.data["batsmen"]["striker"],
+      @non_striker = event.data["batsmen"]["nonStriker"],
+      @bowler = event.data["bowler"],
+      @fielder = event.data["fielder"]
+    end
+
+ end
 
   def to_s()
     output =

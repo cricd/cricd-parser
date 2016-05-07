@@ -1,15 +1,19 @@
 require 'json'
 
-class Properties
-   def initialize()
-      @file_path="./application.json"
+module Properties
+   @file_path="./application.json"
+   if File.exists?(@file_path)
+     file = File.read("#{@file_path}")
+     @properties = JSON.parse(file, :symbolize_names => true)
+   else
+     @properties = nil
    end
-   def get_properties()
-     if File.exists?(@file_path)
-       @file = File.read("#{@file_path}")
+
+   def self.get(property_type)
+     if @properties.key?(property_type.to_sym)
+       return @properties[property_type.to_sym]
      else
-        return nil
+       return nil
      end
-     return JSON.parse(@file)
    end
 end

@@ -8,58 +8,61 @@ require 'json'
 require 'http_eventstore'
 require 'pp'
 require_relative 'properties.rb'
+require_relative 'cricket_event.rb'
 
-# Wickets
-$wickets = ["bowled", "caught","caughtAndBowled", "lbw", "stumped", "run out", "retiredHurt", "hitWicket", "obstructingTheField", "hitTheBallWwice", "handledTheBall", "timedOut"]
+class CricketScore
+  def initialize(runs, over, ball, wickets)
+    @runs = runs
+    @over = over
+    @ball = ball
+    @wickets = wickets
+  end
 
+  def update_from_event(event)
+    @runs += event.instance_variable_get(:@runs).to_i
+    @over = event.instance_variable_get(:@over).to_i
+    @ball = event.instance_variable_get(:@ball).to_i
+    if event.is_wicket?()
+      @wickets += 1
+    end
+  end
 
-# Get properties
-properties = Properties.new
-all_properties = properties.get_properties()
+  def to_s()
+    puts "#{@runs}/#{@wickets} off #{@over}.#{@ball}"
+  end
 
+end
 
 # Set up EventStore
+es_props = Properties.get("eventstore")
 client = HttpEventstore::Connection.new do |config|
-  config.endpoint = all_properties["eventstore"]["ip"]
-  config.port = all_properties["eventstore"]["port"]
+  config.endpoint = es_props["ip"]
+  config.port = es_props["port"]
   config.page_size = '20'
 end
-stream_name = all_properties["eventstore"]["stream_name"]
+stream_name = es_props["stream_name"]
 
 # Read all the events from the stream
 events = client.read_all_events_forward(stream_name)
-
-# Create a struct to define what a score looks like
-Struct.new("Innings_score", :runs, :over, :ball, :wickets)
 
 # Score for innings are going to be in a hash e.g. "1" => Innings_score
 score = {}
 
 events.each do |event|
+ cricket_event = CricketEvent.new(event) 
   current_innings = event["data"]["ball"]["innings"]
   # If we've got some data on this innings
   if score.has_key?(current_innings)
-    score[current_innings].runs += event["data"]["runs"].to_i
-    score[current_innings].over = event["data"]["ball"]["over"].to_i
-    score[current_innings].ball = event["data"]["ball"]["ball"].to_i
-    # If it's a wicket eventType then add to the wickets
-    if $wickets.include?(event["data"]["eventType"])
-      score[current_innings].wickets += 1
-    end
-    # Otherwise create a new record for the innings
+    score[current_innings].update_from_event(cricket_event)
   else
-    score[current_innings] = Struct::Innings_score.new(
+    score[current_innings] = CricketScore.new(
       event["data"]["runs"].to_i,
       event["data"]["ball"]["over"].to_i,
-      event["data"]["ball"]["ball"].to_i)
-    # If by some crazy chance the first ball is a wicket, add to wickets
-    if $wickets.include?(event["data"]["eventType"])
-      score[current_innings].wickets = 1
-    else
-      score[current_innings].wickets = 0
-    end
+      event["data"]["ball"]["ball"].to_i,
+      cricket_event.is_wicket?() ? 1 : 0)
   end
 end
+
 score.each do |key,value|
-  puts "#{value.runs}/#{value.wickets} off #{value.over}.#{value.ball}"
+  puts value.to_s()
 end
