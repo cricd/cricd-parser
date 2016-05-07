@@ -271,8 +271,6 @@ yaml_innings.each_with_index do |innings, index|
           client.append_to_stream(stream_name, event_data)
         rescue StandardError => e
           puts "Error #{e}"
-        else
-         successful_events += 1
         end
     end
   end
