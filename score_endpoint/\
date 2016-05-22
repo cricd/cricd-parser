@@ -1,0 +1,58 @@
+require 'sinatra/base'
+require 'sinatra/param'
+require 'json'
+#require_relative 'score_consumer.rb'
+
+# RESTful service that allows you to find the score
+# Requires:
+# - match ID (final/current score)
+# - over/ball (at a ball)
+# - date/time (at a particular time?)
+
+  # GET /score?match_id=123
+  # GET /score?match_id=123&datetime=2015-01-01
+  # GET /score?match_id=123&over=12
+  # GET /score?match_id=123&ball=3
+  # GET /score?match_id=123&over=12&ball=3
+get '/score' do
+
+  possible_params = {
+    :match_id => {:type => Integer, :required => true, :min => nil, :max => nil},
+    :datetime => {:type => DateTime, :required => false, :min => nil, :max => nil},
+    :innings => {:type => Integer, :required => false, :min => 1, :max => nil},
+    :over => {:type => Integer, :required => false, :min => nil, :max => nil},
+    :ball => {:type => Integer, :required => false, :min => 0, :max => 5}
+  }
+
+  required_params = possible_params.map {|key, value| value[:required] ? key : nil}.compact
+
+  # Check all the parameters
+  required_params_exist = required_params.map { |x| params.include?(x) }.all?
+  unless required_params_exist
+    return "Not all required parameters exist"
+  end
+
+  # Check all the types
+  correct_param_values = params.map {|key, value| value.is_a? possible_params[key][:type]}
+  unless correct_param_values.all?
+    return "Not all required parameters are the right type"
+  end
+
+  # Check all the min/max
+  min_values = possible_params.map { |key, value| value[:min] ? key : nil }.compact
+  max_values = possible_params.map { |key, value| value[:max] ? key : nil }.compact
+
+  min_values_satisfied = min_values.map { |key| params[key] > possible_params[key][:min]}.all?
+  unless min_values_satisfied
+    return "Not all minimum values satisfied"
+  end 
+
+
+  max_values_satisfied = max_values.map { |key| params[key] > possible_params[key][:max]}.all?
+  unless max_values_satisfied
+    return "Not all maximum values satisfied"
+  end
+
+    return params.to_json
+end
+

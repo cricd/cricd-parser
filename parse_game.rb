@@ -10,6 +10,7 @@ require 'http_eventstore'
 require 'pp'
 require_relative 'properties.rb'
 require_relative 'cricket_entity_source.rb'
+require_relative 'cricket_event_source.rb'
 
 # TODO:
 # - Change the event types to be the same as the spec
@@ -24,7 +25,7 @@ def snake_to_camel(string)
 end
 
 def match_to_json(match)
-    output =
+  output =
      {
           "match" => "#{match["match"]["match"]}",
           "eventType" => "#{match["type"]["eventType"]}",
@@ -109,7 +110,6 @@ module CricketEntityParser
   end
 
   def self.parse_deliveries(deliveries)
-
     # Get the over and ball
     overball = delivery.keys.first.to_s.split(".")
     over = {"over" => overball[0]}
@@ -129,10 +129,11 @@ module CricketEntityParser
 
   def self.parse_runs(deliveries)
     # Runs should be the physical runs taken, therefore it should be the score attributed to the batsman. Unless it's byes/legbyes which are counted as extras
-    if deliveries.has_key?("extras") && (deliveries["extras"].keys.first == "legbyes" || deliveries["extras"].keys.first == "byes")
-      return {"runs" => deliveries["runs"]["extras"]}
-    else
-      return {"nuns" => deliveries["runs"]["batsman"]}
+     if (deliveries.has_key?("extras") and \
+          ((deliveries["extras"].keys.first == "legbyes") or (deliveries["extras"].keys.first == "byes")))
+       return {"runs" => deliveries["runs"]["extras"]}
+     else
+      return {"runs" => deliveries["runs"]["batsman"]}
     end
   end
 
@@ -159,13 +160,6 @@ module CricketEntityParser
   end
 end
 
-# Set up EventStore
-es_props = Properties.get("eventstore")
-client = HttpEventstore::Connection.new do |config|
-  config.endpoint = es_props["ip"]
-  config.port = es_props["port"]
-  config.page_size = '20'
-end
 
 
 # Parse out all the deliveries to an array
@@ -182,7 +176,7 @@ game_metadata = {
   "teams" => game["info"]["teams"]
 }
 # Parse out the meta-data
-game_metadata["teams"].map! { |team| CricketEntityParser.parse_team(team) } 
+game_metadata["teams"].map! { |team| CricketEntityParser.parse_team(team) }
 teams = game_metadata["teams"]
 
 # Parse out the innings
@@ -240,7 +234,7 @@ yaml_innings.each_with_index do |innings, index|
       runs = CricketEntityParser.parse_runs(delivery_values)
 
         # Set the number of runs scored by the batsman, and fake the timestamp
-        timestamp = {"timestamp" => DateTime.now.iso8601}
+        timestamp = {"timestamp" => game_metadata["dates"].first}
 
         # Create a new event with the data parsed
         values = {
@@ -260,18 +254,7 @@ yaml_innings.each_with_index do |innings, index|
 
         # Create the string of the event and push to ES
         event = match_to_json(values)
-
-        # Push to event store
-        stream_name = all_properties["eventstore"]["stream_name"]
-        event_data = { event_type: "cricket_event",
-                       data: event,
-                       event_id: SecureRandom.uuid
-                     }
-       begin
-          client.append_to_stream(stream_name, event_data)
-        rescue StandardError => e
-          puts "Error #{e}"
-        end
+        CricketEventStore.append_to_stream(event)
     end
   end
 end

@@ -1,5 +1,6 @@
 
 class CricketEvent
+  attr_accessor :ball, :over, :runs, :innings, :timestamp
   def initialize(event)
       @match = event.data["match"],
       @type = event.data["eventType"],
@@ -15,6 +16,14 @@ class CricketEvent
       @bowler = event.data["bowler"],
       @fielder = event.data["fielder"]
     end
+
+  def is_extra?()
+    if ["wides", "noballs", "penalty"].include?(@type)
+      return true
+    else
+      return false
+    end
+  end
 
   def is_wicket?()
     if ["bowled", "caught","caughtAndBowled", "lbw", "stumped", "run out", "retiredHurt", "hitWicket", "obstructingTheField", "hitTheBallWwice", "handledTheBall", "timedOut"].include?(@type)
