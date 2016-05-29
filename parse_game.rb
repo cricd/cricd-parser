@@ -164,7 +164,7 @@ end
 # Parse out all the deliveries to an array
 
 all_files = Dir.entries(Properties.get("game_path")).select {|f| !File.directory? f}
-all_files.each do |file|
+all_files.each_with_index do |file, index|
   game = YAML.load_file(Properties.get("game_path") + file)
 
   # Grab me some meta-data
@@ -261,5 +261,6 @@ all_files.each do |file|
     end
   end
 
+  puts "Completed #{file} file #{index+1}/#{all_files.length} complete"
 end
 
