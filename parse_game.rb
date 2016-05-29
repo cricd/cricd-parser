@@ -8,8 +8,8 @@ require 'date'
 require 'json'
 require 'pp'
 require_relative 'properties.rb'
-require_relative 'cricket_entity_source.rb'
-require_relative 'cricket_event_source.rb'
+require_relative 'cricket_entity_store.rb'
+require_relative 'cricket_event_store.rb'
 
 # TODO:
 # - Change the event types to be the same as the spec
