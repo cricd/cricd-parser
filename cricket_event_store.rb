@@ -13,11 +13,11 @@ module CricketEventStore
   end
   @stream_name = es_props[:stream_name]
 
-  def read_all_events()
+  def self.read_all_events()
     return @client.read_all_events_forward(@stream_name)
   end
 
-  def append_to_stream(data)
+  def self.append_to_stream(data)
    event_data = { event_type: "cricket_event",
                   data: data,
                   event_id: SecureRandom.uuid
