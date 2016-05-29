@@ -162,75 +162,78 @@ end
 
 
 # Parse out all the deliveries to an array
-game = YAML.load_file(Properties.get("game_path"))
 
-# Grab me some meta-data
-game_metadata = {
-  "dates" => game["info"]["dates"],
-  "city" => game["info"]["city"],
-  "venue" => game["info"]["venue"],
-  "match_type" => game["info"]["match_type"],
-  "outcome" => game["info"]["outcome"],
-  "overs" => game["info"]["overs"],
-  "teams" => game["info"]["teams"]
-}
-# Parse out the meta-data
-game_metadata["teams"].map! { |team| CricketEntityParser.parse_team(team) }
-teams = game_metadata["teams"]
+all_files = Dir.entries(Properties.get("game_path")).select {|f| !File.directory? f}
+all_files.each do file
+  game = YAML.load_file(Properties.get("game_path") + file)
 
-# Parse out the innings
-innings = game["innings"].first.map { |innings| CricketEntityParser.parse_innings(innings) }
-match = CricketEntityParser.parse_match(game_metadata)
+  # Grab me some meta-data
+  game_metadata = {
+    "dates" => game["info"]["dates"],
+    "city" => game["info"]["city"],
+    "venue" => game["info"]["venue"],
+    "match_type" => game["info"]["match_type"],
+    "outcome" => game["info"]["outcome"],
+    "overs" => game["info"]["overs"],
+    "teams" => game["info"]["teams"]
+  }
+  # Parse out the meta-data
+  game_metadata["teams"].map! { |team| CricketEntityParser.parse_team(team) }
+  teams = game_metadata["teams"]
 
-yaml_innings = game["innings"]
-# [{"1st innings" =>
-# {team => ...,
-# "deliveries =>
-# [{0.1 => }]}
-# },
-# {"2nd innings"=>
-# {"team"=>"United Arab Emirates",
-#  "deliveries"=>
-#  [{0.1=>}]
-# }]
+  # Parse out the innings
+  innings = game["innings"].first.map { |innings| CricketEntityParser.parse_innings(innings) }
+  match = CricketEntityParser.parse_match(game_metadata)
 
-#  Create an array with all the optional fields
-yaml_innings.each_with_index do |innings, index|
-  innings.each do |innings_key, innings_info|
-    batting_team, fielding_team = {}
+  yaml_innings = game["innings"]
+  # [{"1st innings" =>
+  # {team => ...,
+  # "deliveries =>
+  # [{0.1 => }]}
+  # },
+  # {"2nd innings"=>
+  # {"team"=>"United Arab Emirates",
+  #  "deliveries"=>
+  #  [{0.1=>}]
+  # }]
 
-    # Get  the team name and ID
-    teams.each do |team|
-      if team["name"] == innings_info["team"]
-        batting_team = team
-      else
-        fielding_team = team
+  #  Create an array with all the optional fields
+  yaml_innings.each_with_index do |innings, index|
+    innings.each do |innings_key, innings_info|
+      batting_team, fielding_team = {}
+
+      # Get  the team name and ID
+      teams.each do |team|
+        if team["name"] == innings_info["team"]
+          batting_team = team
+        else
+          fielding_team = team
+        end
       end
-    end
 
-    # Get the innings
-    innings = {"innings" => index+1}
+      # Get the innings
+      innings = {"innings" => index+1}
 
-    # For all of the deliveries
-    # innings_info["deliveries"] is an array of deliveries
-    # e.g.
-    # {0.1=>
-    #    {"batsman"=>"MR Swart",
-    #     "bowler"=>"Qadeer Ahmed",
-    #     "non_striker"=>"SJ Myburgh",
-    #     "runs"=>{"batsman"=>0, "extras"=>0, "total"=>0}}}
-    innings_info["deliveries"].each do |delivery|
+      # For all of the deliveries
+      # innings_info["deliveries"] is an array of deliveries
+      # e.g.
+      # {0.1=>
+      #    {"batsman"=>"MR Swart",
+      #     "bowler"=>"Qadeer Ahmed",
+      #     "non_striker"=>"SJ Myburgh",
+      #     "runs"=>{"batsman"=>0, "extras"=>0, "total"=>0}}}
+      innings_info["deliveries"].each do |delivery|
 
-      delivery_values = delivery.values.first
+        delivery_values = delivery.values.first
 
-      # Get the over and ball
-      overball = delivery.keys.first.to_s.split(".")
-      over = {"over" => overball[0]}
-      ball = {"ball" => overball[1]}
+        # Get the over and ball
+        overball = delivery.keys.first.to_s.split(".")
+        over = {"over" => overball[0]}
+        ball = {"ball" => overball[1]}
 
-      striker, non_striker, bowler, fielder = CricketEntityParser.parse_players(delivery_values)
-      event_type = CricketEntityParser.parse_event_type(delivery_values)
-      runs = CricketEntityParser.parse_runs(delivery_values)
+        striker, non_striker, bowler, fielder = CricketEntityParser.parse_players(delivery_values)
+        event_type = CricketEntityParser.parse_event_type(delivery_values)
+        runs = CricketEntityParser.parse_runs(delivery_values)
 
         # Set the number of runs scored by the batsman, and fake the timestamp
         timestamp = {"timestamp" => game_metadata["dates"].first}
@@ -254,8 +257,9 @@ yaml_innings.each_with_index do |innings, index|
         # Create the string of the event and push to ES
         event = match_to_json(values)
         CricketEventStore.append_to_stream(event)
+      end
     end
   end
-end
 
+end
 
