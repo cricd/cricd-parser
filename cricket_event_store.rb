@@ -23,7 +23,7 @@ module CricketEventStore
                   event_id: SecureRandom.uuid
                 }
    begin
-     @client.append_to_stream(@steam_name, event_data)
+     @client.append_to_stream(@stream_name, event_data)
    rescue StandardError => e
      puts "Error #{e}"
    end
