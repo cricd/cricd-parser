@@ -2,10 +2,13 @@ require 'rubygems'
 require 'bundler/setup'
 require 'json'
 require 'date'
+require 'sinatra'
+
 require_relative '../cricket_event.rb'
 require_relative '../cricket_score.rb'
 require_relative '../cricket_event_store.rb'
 
+set :port, 4567
 
 module CricketScoreConsumer
 # TODO: Implement match searching

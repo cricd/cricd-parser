@@ -257,6 +257,11 @@ all_files.each_with_index do |file, index|
         # Create the string of the event and push to ES
         event = match_to_json(values)
         CricketEventStore.append_to_stream(event)
+        output_file_name = file.sub("yaml", "json")
+        File.open(output_file_name, 'a') do |f|
+          f.puts(event)
+        end
+
       end
     end
   end
