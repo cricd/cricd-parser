@@ -1,5 +1,5 @@
 
-FROM ruby:2.3
+FROM ruby:2.3.0
 MAINTAINER Ryan Scott <ryankennethscott@gmail.com>
 
 # throw errors if Gemfile has been modified since Gemfile.lock
@@ -14,4 +14,4 @@ RUN bundle install
 COPY . /app
 
 EXPOSE 4567
-CMD ruby cricket_events_api.rb 
+CMD ["ruby", "cricket_events_api.rb"] 

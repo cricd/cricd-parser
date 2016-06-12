@@ -7,54 +7,69 @@ require 'securerandom'
 require 'date'
 require 'json'
 require 'pp'
-require_relative 'properties.rb'
-require_relative 'cricket_entity_store.rb'
-require_relative 'cricket_event_store.rb'
+require 'json-schema'
+require 'logger'
+
+require_relative './helpers/properties.rb'
+require_relative './helpers/cricket_entity_store.rb'
+require_relative './helpers/cricket_event_store.rb'
 
 # TODO:
-# - Change the event types to be the same as the spec
-# - Fix the issue where legbyes are 0 runs
+# - Change props to be ENV?
 
-
-def snake_to_camel(string)
-  str_array = string.split("_")
-  first_element = str_array.shift
-  capitalized_string = str_array.map{ |x| x.capitalize!}.join
-  return first_element + capitalized_string
-end
+# Lookup to match the event types to the spec
+$event_type_lookup = {
+ "bowled" => "bowled",
+ "caught" => "caught",
+ "caught and bowled" => "caughtAndBowled", 
+ "lbw" => "lbw",
+ "stumped" => "stumped",
+ "run out" => "runOut",
+ "retired hurt" => "retiredHurt",
+ "hit wicket" => "hitWicket",
+ "obstructing the field" => "obstruction",
+ "hit the ball twice" => "doubleHit",
+ "handled the ball" => "handledBall",
+ "timed out" => "timedOut",
+ "legbyes" => "legBye",
+ "noballs" => "noBall",
+ "penalty" => "penaltyRuns",
+ "wides" => "wide",
+ "byes" => "bye"
+}
 
 def match_to_json(match)
   output =
      {
-          "match" => "#{match["match"]["match"]}",
+          "match" => match["match"]["match"],
           "eventType" => "#{match["type"]["eventType"]}",
           "timestamp"=> "#{match["timestamp"]["timestamp"]}",
           "ball" => {
               "battingTeam" => {
-                  "id"=> "#{match["batting_team"]["id"]}",
+                  "id"=> match["batting_team"]["id"],
                   "name"=> "#{match["batting_team"]["name"]}"
               },
               "fieldingTeam"=> {
-                  "id"=> "#{match["fielding_team"]["id"]}",
+                  "id"=> match["fielding_team"]["id"],
                   "name"=> "#{match["fielding_team"]["name"]}"
               },
-              "innings"=> "#{match["innings"]["innings"]}",
-              "over"=> "#{match["over"]["over"]}",
-              "ball"=> "#{match["ball"]["ball"]}"
+              "innings"=> match["innings"]["innings"],
+              "over"=> match["over"]["over"].to_i,
+              "ball"=> match["ball"]["ball"].to_i
           },
-          "runs"=> "#{match["runs"]["runs"]}",
+          "runs"=> match["runs"]["runs"],
           "batsmen"=> {
               "striker"=> {
-                "id"=> "#{match["striker"]["id"]}",
+                "id"=> match["striker"]["id"],
                 "name"=> "#{match["striker"]["name"]}"
               },
               "nonStriker"=> {
-                "id"=> "#{match["non_striker"]["id"]}",
+                "id"=> match["non_striker"]["id"],
                 "name"=> "#{match["non_striker"]["name"]}"
               }
           },
           "bowler"=> {
-                "id"=> "#{match["bowler"]["id"]}",
+                "id"=> match["bowler"]["id"],
                 "name"=> "#{match["bowler"]["name"]}"
           }
       }
@@ -62,13 +77,12 @@ def match_to_json(match)
     if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
 
       output["fielder"] = {
-             "id" => "#{match["fielder"]["id"]}",
+             "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
            }
     end
     return output
 end
-
 
 module CricketEntityParser
 
@@ -111,16 +125,16 @@ module CricketEntityParser
   def self.parse_deliveries(deliveries)
     # Get the over and ball
     overball = delivery.keys.first.to_s.split(".")
-    over = {"over" => overball[0]}
-    ball = {"ball" => overball[1]}
+    over = {"over" => overball[0].to_i}
+    ball = {"ball" => overball[1].to_i}
 
   end
 
   def self.parse_event_type(event_type)
     if event_type.key?("wicket")
-      return {"eventType" => snake_to_camel(event_type["wicket"]["kind"])}
+      return {"eventType" => $event_type_lookup[event_type["wicket"]["kind"]]}
     elsif event_type.key?("extras")
-      return {"eventType" =>  snake_to_camel(event_type["extras"].keys.first)}
+      return {"eventType" =>  $event_type_lookup[event_type["extras"].keys.first]}
     else
       return {"eventType" => "delivery"}
     end
@@ -159,13 +173,40 @@ module CricketEntityParser
   end
 end
 
+# Set up logging
+$logger = Logger.new(STDOUT)
 
+# Get the JSON schema
+begin
+  schema = JSON.parse(File.read('event_schema.json'))
+rescue IOError => e 
+  $logger.fatal("Unable to open or parse JSON schema #{e}")
+  exit
+end
 
 # Parse out all the deliveries to an array
+game_path = Dir.pwd + Properties.get("game_path")
+begin
+  all_files = Dir.entries(game_path).select {|f| !File.directory? f}
+rescue IOError => e
+  $logger.fatal("Unable to open game files at #{game_path} #{e}")
+  exit
+rescue Errno::ENOENT => e
+  $logger.fatal("Unable to open game files at #{game_path} #{e}")
+  exit
+rescue Errno::ENOTDIR => e
+  $logger.fatal("Game path specified is not a directory #{e}")
+  exit
+end
 
-all_files = Dir.entries(Properties.get("game_path")).select {|f| !File.directory? f}
+
 all_files.each_with_index do |file, index|
-  game = YAML.load_file(Properties.get("game_path") + file)
+  begin
+    game = YAML.load_file(game_path + file)
+  rescue Errno::ENOENT => e
+    $logger.fatal("Unable to open game file at #{game_path + file} #{e}")
+    exit
+  end
 
   # Grab me some meta-data
   game_metadata = {
@@ -256,12 +297,20 @@ all_files.each_with_index do |file, index|
 
         # Create the string of the event and push to ES
         event = match_to_json(values)
-        CricketEventStore.append_to_stream(event)
-        output_file_name = file.sub("yaml", "json")
-        File.open(output_file_name, 'a') do |f|
-          f.puts(event)
-        end
 
+        # Do the JSON validation
+        begin
+          JSON::Validator.validate!(schema, event)
+        rescue JSON::Schema::ValidationError => e
+          $logger.fatal("Incorrect JSON created for event #{e}")
+          e.message
+          exit
+        end
+        CricketEventStore.append_to_stream(event)
+        # output_file_name = file.sub("yaml", "json")
+        # File.open(output_file_name, 'a') do |f|
+        #   f.puts(event)
+        # end
       end
     end
   end
