@@ -1,17 +1,17 @@
-FROM alpine:latest
 
+FROM ruby:2.3.0
 MAINTAINER Ryan Scott <ryankennethscott@gmail.com>
 
+# throw errors if Gemfile has been modified since Gemfile.lock
+RUN bundle config --global frozen 1
 
-ENV BUILD_PACKAGES bash curl-dev ruby-dev build-base curl wget bash git openssh ca-certificates
-ENV RUBY_PACKAGES ruby ruby-io-console ruby-bundler
+RUN mkdir /app
+WORKDIR /app
+COPY Gemfile /app/
+COPY Gemfile.lock /app/
+RUN bundle install
 
+COPY . /app
 
-RUN apk update && \
-    apk upgrade && \
-    apk add $BUILD_PACKAGES && \
-    apk add $RUBY_PACKAGES && \
-    rm -rf /var/cached/apk*
-
-RUN git clone https://github.com/ryankscott/cricket_tools.git
-RUN cd cricket_tools && bundle install
+EXPOSE 4567
+CMD ["ruby", "parse_game.rb"] 

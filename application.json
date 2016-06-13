@@ -7,7 +7,7 @@
     "cricket_entity_source":
     {
         "ip": "0.0.0.0",
-        "port": "1338"
+        "port": "1337"
     },
     "game_path": "/t20s/"
 }

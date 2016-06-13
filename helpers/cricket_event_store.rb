@@ -1,20 +1,33 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'http_eventstore'
-require_relative 'properties.rb'
+require 'logger'
+
 
 # Set up EventStore
 module CricketEventStore
-  es_props = Properties.get("eventstore")
+  settings = {
+    :ip => ENV["EVENTSTORE_IP"].nil? ? "localhost" : ENV["EVENTSTORE_IP"],
+    :port => ENV["EVENTSTORE_PORT"].nil? ? "2113" : ENV["EVENTSTORE_PORT"],
+    :stream_name => ENV["EVENTSTORE_STREAM_NAME"].nil? ? "cricket_events_v1" : ENV["EVENTSTORE_STREAM_NAME"]
+  }
+
+
+  @logger = Logger.new(STDOUT)
   @client = HttpEventstore::Connection.new do |config|
-    config.endpoint = es_props[:ip]
-    config.port = es_props[:port]
+    config.endpoint = settings[:ip]
+    config.port = settings[:port]
     config.page_size = '20'
   end
-  @stream_name = es_props[:stream_name]
+  @stream_name = settings[:stream_name]
 
   def self.read_all_events()
-    return @client.read_all_events_forward(@stream_name)
+    begin
+      all_events = @client.read_all_events_forward(@stream_name)
+    rescue StandardError => e
+      @logger.error("Failed to read events from EventStore #{e}")
+    end
+    return all_events.nil? ? nil : all_events
   end
 
   def self.append_to_stream(data)
@@ -25,7 +38,7 @@ module CricketEventStore
    begin
      @client.append_to_stream(@stream_name, event_data)
    rescue StandardError => e
-     puts "Error #{e}"
+     @logger.error("Failed to push event to EventStore - #{e}")
    end
   end
 end
