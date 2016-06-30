@@ -12,8 +12,8 @@ module CricketEventStore
     :stream_name => ENV["EVENTSTORE_STREAM_NAME"].nil? ? "cricket_events_v1" : ENV["EVENTSTORE_STREAM_NAME"]
   }
 
-
   @logger = Logger.new(STDOUT)
+  @logger.info("Connecting to eventstore at #{settings[:ip]}:#{settings[:port]}")
   @client = HttpEventstore::Connection.new do |config|
     config.endpoint = settings[:ip]
     config.port = settings[:port]

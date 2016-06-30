@@ -3,7 +3,7 @@ require 'logger'
 
 module Properties
   @logger = Logger.new(STDOUT)
-  @file_path="./application.json"
+  @file_path="../application.json"
      begin
        file = File.read("#{@file_path}")
      rescue IOError => e

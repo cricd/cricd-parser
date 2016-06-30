@@ -3,12 +3,13 @@ require 'logger'
 
 module CricketEntityStore
   config = {
-    :ip => ENV["ENTITY_IP"].nil? ? "localhost" : ENV["ENTITYSTORE_IP"],
+    :ip => ENV["ENTITYSTORE_IP"].nil? ? "localhost" : ENV["ENTITYSTORE_IP"],
     :port => ENV["ENTITYSTORE_PORT"].nil? ? "1337" : ENV["ENTITYSTORE_PORT"],
   }
   @logger = Logger.new(STDOUT)
-  @logger.level = Logger::ERROR
   @url = "http://#{config[:ip]}:#{config[:port]}"
+  @logger.info("Connecting to entity store at #{config[:ip]}:#{config[:port]}")
+  @logger.info(ENV)
 
   def self.create_team(name)
     @logger.info("Trying to create team with name #{name}")

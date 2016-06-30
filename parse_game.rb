@@ -16,7 +16,6 @@ require_relative './helpers/cricket_event_store.rb'
 settings = {
     :game_path => ENV["GAME_PATH"].nil? ? "/t20s/" : ENV["GAME_PATH"]
 }
-
 # Lookup to match the event types to the spec
 $event_type_lookup = {
  "bowled" => "bowled",
@@ -175,6 +174,7 @@ end
 
 # Set up logging
 $logger = Logger.new(STDOUT)
+$logger.error(ENV)
 
 # Get the JSON schema
 begin
@@ -187,7 +187,8 @@ end
 # Start listening for file changes
 listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polling: true) do |modified, added|
   unless added.nil? or added.empty?
-  puts "Found file #{added.first}"
+   $logger.info("Found YAML file for processing:  #{added.first}")
+   puts "Found YAML file for processing:  #{added.first}"
     begin
       game = YAML.load_file(added.first.to_s)
     rescue Errno::ENOENT => e
@@ -288,6 +289,7 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
             exit
           end
           CricketEventStore.append_to_stream(event)
+          $logger.info("Pushing event to stream")
         end
       end
     end
