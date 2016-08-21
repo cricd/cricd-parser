@@ -6,7 +6,7 @@ MAINTAINER Ryan Scott <ryankennethscott@gmail.com>
 RUN bundle config --global frozen 1
 
 RUN mkdir /app
-RUN mkdir /app/t20s
+RUN mkdir /app/games
 WORKDIR /app
 COPY Gemfile /app/
 COPY Gemfile.lock /app/

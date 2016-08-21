@@ -14,7 +14,7 @@ require_relative './helpers/cricket_event_store.rb'
 #  - When failing to find a match you need to break
 
 settings = {
-    :game_path => ENV["GAME_PATH"].nil? ? "/t20s/" : ENV["GAME_PATH"]
+    :game_path => ENV["GAME_PATH"].nil? ? "/games/" : ENV["GAME_PATH"]
 }
 # Lookup to match the event types to the spec
 $event_type_lookup = {
@@ -288,7 +288,8 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
             e.message
             exit
           end
-          CricketEventStore.append_to_stream(event)
+          puts event
+          #CricketEventStore.append_to_stream(event)
           $logger.info("Pushing event to stream")
         end
       end

@@ -1,4 +1,0 @@
-source 'https://rubygems.org'
-gem 'http_eventstore'
-gem 'sinatra'
-gem 'sinatra-param'
