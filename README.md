@@ -11,7 +11,9 @@ The parser requires a cricd-entities instance, an EventStore instance and a dire
  - EVENTSTORE_PORT
  - EVENTSTORE_STREAM_NAME
 
-The watch directory needs to be passed as a docker volume.  You can specify these parameters when running the docker container. For example:
+The watch directory needs to be passed as a docker volume.  You can specify these parameters when running the docker container. 
+For example:
+
 ```docker run -d -e ENTITYSTORE_IP=172.18.0.2 -e ENTITYSTORE_PORT=1337 -e EVENTSTORE_IP=172.18.0.3 -e EVENTSTORE_PORT=2113 -e EVENTSTORE_STREAM_NAME=cricket_events -v /games/:/app/games ryankscott/cricd-parser```
 
 If your EventStore instance is running in a Docker container as well then network connectivity will need to be established between these instances. This is explained in the Docker networking documentation but the steps at a high level are: 1. Create a user defined network using a command like docker network create --driver bridge cricd-network 2. Start your EventStore container using the --network parameter docker run --net=cricd-network 3. Find the IP address of the EventStore container using the command docker network inspect cricd-network 4. Start this Docker container using the --net=cricd-network parameter and using the EVENTSTORE_IP variable set to the IP address you just found
