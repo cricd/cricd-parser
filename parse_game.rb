@@ -278,8 +278,8 @@ def process_game(game)
             e.message
             exit
           end
-          #puts event
-          CricketEventStore.append_to_stream(event)
+          puts event
+          #CricketEventStore.append_to_stream(event)
           $logger.info("Pushing event to stream")
         end
       end
@@ -288,6 +288,7 @@ def process_game(game)
 end
 
 # Start listening for file changes
+# TODO: Tryi f the directory doesn't exist
 listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polling: true) do |modified, added|
   unless added.nil? or added.empty?
    $logger.info("Found YAML file(s) for processing")
@@ -297,7 +298,8 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
          game = YAML.load_file(x.to_s)
          process_game(game)
          done_file = File.open(Dir.pwd + setings[:game_path] + x.to_s)
-         puts done_file 
+         done_file.rename(x.to_s, x.to_s + ".done" )
+        puts done_file 
       end
     rescue Errno::ENOENT => e
       $logger.fatal("Unable to open game file at #{added.first} #{e}")
