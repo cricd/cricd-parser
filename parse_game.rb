@@ -184,19 +184,8 @@ rescue IOError => e
   exit
 end
 
-# Start listening for file changes
-listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polling: true) do |modified, added|
-  unless added.nil? or added.empty?
-   $logger.info("Found YAML file for processing:  #{added.first}")
-   puts "Found YAML file for processing:  #{added.first}"
-    begin
-      game = YAML.load_file(added.first.to_s)
-    rescue Errno::ENOENT => e
-      $logger.fatal("Unable to open game file at #{added.first} #{e}")
-      exit
-    end
-
-    # Grab me some meta-data
+def process_game(game)
+  # Grab me some meta-data
     game_metadata = {
       "dates" => game["info"]["dates"],
       "city" => game["info"]["city"],
@@ -206,6 +195,7 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
       "overs" => game["info"]["overs"],
       "teams" => game["info"]["teams"]
     }
+
     # Parse out the meta-data
     game_metadata["teams"].map! { |team| CricketEntityParser.parse_team(team) }
     teams = game_metadata["teams"]
@@ -215,7 +205,7 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
     match = CricketEntityParser.parse_match(game_metadata)
     # If we already have this match then break out
     if match == nil?
-      break
+      return
     end
 
     yaml_innings = game["innings"]
@@ -295,9 +285,26 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
       end
     end
     $logger.info("Finished pushing match to EventStore")
-  end
 end
 
+# Start listening for file changes
+listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polling: true) do |modified, added|
+  unless added.nil? or added.empty?
+   $logger.info("Found YAML file(s) for processing")
+    begin
+      added.each do |x|
+         $logger.info("Processing file #{x}")  
+         game = YAML.load_file(x.to_s)
+         process_game(game)
+         done_file = File.open(Dir.pwd + setings[:game_path] + x.to_s)
+         puts done_file 
+      end
+    rescue Errno::ENOENT => e
+      $logger.fatal("Unable to open game file at #{added.first} #{e}")
+      exit
+    end
+  end
+end
 listener.start # not blocking
 sleep
 
