@@ -4,7 +4,7 @@ require 'logger'
 module CricketEntityStore
   config = {
     :ip => ENV["ENTITYSTORE_IP"].nil? ? "localhost" : ENV["ENTITYSTORE_IP"],
-    :port => ENV["ENTITYSTORE_PORT"].nil? ? "1338" : ENV["ENTITYSTORE_PORT"],
+    :port => ENV["ENTITYSTORE_PORT"].nil? ? "1337" : ENV["ENTITYSTORE_PORT"],
   }
   @logger = Logger.new(STDOUT)
   @url = "http://#{config[:ip]}:#{config[:port]}"

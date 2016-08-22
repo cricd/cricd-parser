@@ -6,6 +6,7 @@ require 'json'
 require 'json-schema'
 require 'logger'
 require 'listen'
+require 'pp'
 require_relative './helpers/cricket_entity_store.rb'
 require_relative './helpers/cricket_event_store.rb'
 
@@ -74,7 +75,7 @@ def match_to_json(match)
       }
 
     if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
-
+      puts "here"
       output["fielder"] = {
              "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
@@ -165,6 +166,11 @@ module CricketEntityParser
         match_metadata["overs"],
         match_metadata["dates"].first
       )
+      # If it fails to create the match
+      if new_match.nil?
+        $logger.fatal("Failed to create or find match from EntityStore")
+        return nil
+      end
       return match = {"match" => new_match["id"]}
     else
       return match = {"match" => found_match["id"]}
@@ -174,11 +180,10 @@ end
 
 # Set up logging
 $logger = Logger.new(STDOUT)
-$logger.error(ENV)
 
 # Get the JSON schema
 begin
- $schema = JSON.parse(File.read('event_schema.json')
+ $schema = JSON.parse(File.read('event_schema.json'))
 rescue IOError => e
   $logger.fatal("Unable to open or parse JSON schema #{e}")
   exit
@@ -204,10 +209,10 @@ def process_game(game)
     innings = game["innings"].first.map { |innings| CricketEntityParser.parse_innings(innings) }
     match = CricketEntityParser.parse_match(game_metadata)
     # If we already have this match then break out
-    if match == nil?
+    if match.nil?
+      $logger.fatal("We have this match so stopping now")
       return
     end
-
     yaml_innings = game["innings"]
 
     #  Create an array with all the optional fields
@@ -244,7 +249,9 @@ def process_game(game)
           over = {"over" => overball[0]}
           ball = {"ball" => overball[1]}
 
+          puts delivery_values
           striker, non_striker, bowler, fielder = CricketEntityParser.parse_players(delivery_values)
+          puts fielder
           event_type = CricketEntityParser.parse_event_type(delivery_values)
           runs = CricketEntityParser.parse_runs(delivery_values)
 
@@ -266,6 +273,7 @@ def process_game(game)
             "non_striker" => non_striker,
             "bowler" => bowler,
             "fielder" => fielder}
+            puts values
 
           # Create the string of the event and push to ES
           event = match_to_json(values)
@@ -289,7 +297,7 @@ end
 
 # Start listening for file changes
 # TODO: Try if the directory doesn't exist
-listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polling: true) do |modified, added|
+listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml$/, force_polling: true) do |modified, added|
   unless added.nil? or added.empty?
    $logger.info("Found YAML file(s) for processing")
     begin
@@ -297,9 +305,8 @@ listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polli
          $logger.info("Processing file #{x}")  
          game = YAML.load_file(x.to_s)
          process_game(game)
-         done_file = File.open(Dir.pwd + setings[:game_path] + x.to_s)
-         done_file.rename(x.to_s, x.to_s + ".done" )
-        puts done_file 
+         done_file = File.open(Dir.pwd + settings[:game_path])
+         File.rename(x.to_s, x.to_s + ".done")
       end
     rescue Errno::ENOENT => e
       $logger.fatal("Unable to open game file at #{added.first} #{e}")
