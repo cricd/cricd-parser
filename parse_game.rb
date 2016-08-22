@@ -178,7 +178,7 @@ $logger.error(ENV)
 
 # Get the JSON schema
 begin
-  schema = JSON.parse(File.read('event_schema.json'))
+ $schema = JSON.parse(File.read('event_schema.json')
 rescue IOError => e
   $logger.fatal("Unable to open or parse JSON schema #{e}")
   exit
@@ -272,7 +272,7 @@ def process_game(game)
 
           # Do the JSON validation
           begin
-            JSON::Validator.validate!(schema, event)
+            JSON::Validator.validate!($schema, event)
           rescue JSON::Schema::ValidationError => e
             $logger.fatal("Incorrect JSON created for event #{e}")
             e.message
@@ -288,7 +288,7 @@ def process_game(game)
 end
 
 # Start listening for file changes
-# TODO: Tryi f the directory doesn't exist
+# TODO: Try if the directory doesn't exist
 listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml/, force_polling: true) do |modified, added|
   unless added.nil? or added.empty?
    $logger.info("Found YAML file(s) for processing")
