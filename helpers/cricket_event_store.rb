@@ -13,6 +13,7 @@ module CricketEventStore
   }
 
   @logger = Logger.new(STDOUT)
+  @logger.level = Logger::WARN
   @logger.info("Connecting to eventstore at #{settings[:ip]}:#{settings[:port]}")
   @client = HttpEventstore::Connection.new do |config|
     config.endpoint = settings[:ip]

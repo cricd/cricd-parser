@@ -25,6 +25,7 @@ GEM
       ruby_dep (~> 1.2)
     multi_xml (0.5.5)
     multipart-post (2.0.0)
+    parallel (1.9.0)
     rb-fsevent (0.9.7)
     rb-inotify (0.9.7)
       ffi (>= 0.5.0)
@@ -38,6 +39,7 @@ DEPENDENCIES
   httparty
   json-schema
   listen
+  parallel
 
 BUNDLED WITH
-   1.12.1
+   1.12.5

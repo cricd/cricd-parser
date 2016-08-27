@@ -6,7 +6,7 @@ require 'json'
 require 'json-schema'
 require 'logger'
 require 'listen'
-require 'pp'
+require 'parallel'
 require_relative './helpers/cricket_entity_store.rb'
 require_relative './helpers/cricket_event_store.rb'
 
@@ -14,14 +14,25 @@ require_relative './helpers/cricket_event_store.rb'
 # - Change props to be ENV?
 #  - When failing to find a match you need to break
 
+# Set up logging
+$logger = Logger.new(STDOUT)
+$logger.level = Logger::INFO
+
+
 settings = {
     :game_path => ENV["GAME_PATH"].nil? ? "/games/" : ENV["GAME_PATH"]
 } 
+
+if File.directory?(settings[:game_path]) == nil
+  $logger.fatal("Game path file does not exist")
+  exit
+end
+
 # Lookup to match the event types to the spec
 $event_type_lookup = {
  "bowled" => "bowled",
  "caught" => "caught",
- "caught and bowled" => "caughtAndBowled", 
+ "caught and bowled" => "caught", 
  "lbw" => "lbw",
  "stumped" => "stumped",
  "run out" => "runOut",
@@ -75,7 +86,6 @@ def match_to_json(match)
       }
 
     if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
-      puts "here"
       output["fielder"] = {
              "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
@@ -141,7 +151,8 @@ module CricketEntityParser
   end
 
   def self.parse_runs(deliveries)
-    # Runs should be the physical runs taken, therefore it should be the score attributed to the batsman. Unless it's byes/legbyes which are counted as extras
+    # Runs should be the physical runs taken, therefore it should be the score attributed to the batsman. 
+    # Unless it's byes/legbyes which are counted as extras
      if (deliveries.has_key?("extras") and \
           ((deliveries["extras"].keys.first == "legbyes") or (deliveries["extras"].keys.first == "byes")))
        return {"runs" => deliveries["runs"]["extras"]}
@@ -177,10 +188,6 @@ module CricketEntityParser
     end
   end
 end
-
-# Set up logging
-$logger = Logger.new(STDOUT)
-
 # Get the JSON schema
 begin
  $schema = JSON.parse(File.read('event_schema.json'))
@@ -249,10 +256,8 @@ def process_game(game)
           over = {"over" => overball[0]}
           ball = {"ball" => overball[1]}
 
-          puts delivery_values
           striker, non_striker, bowler, fielder = CricketEntityParser.parse_players(delivery_values)
-          puts fielder
-          event_type = CricketEntityParser.parse_event_type(delivery_values)
+            event_type = CricketEntityParser.parse_event_type(delivery_values)
           runs = CricketEntityParser.parse_runs(delivery_values)
 
           # Set the number of runs scored by the batsman, and fake the timestamp
@@ -273,7 +278,6 @@ def process_game(game)
             "non_striker" => non_striker,
             "bowler" => bowler,
             "fielder" => fielder}
-            puts values
 
           # Create the string of the event and push to ES
           event = match_to_json(values)
@@ -286,8 +290,7 @@ def process_game(game)
             e.message
             exit
           end
-          puts event
-          #CricketEventStore.append_to_stream(event)
+          CricketEventStore.append_to_stream(event)
           $logger.info("Pushing event to stream")
         end
       end
@@ -296,17 +299,16 @@ def process_game(game)
 end
 
 # Start listening for file changes
-# TODO: Try if the directory doesn't exist
-listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml$/, force_polling: true) do |modified, added|
+listener = Listen.to(Dir.pwd + settings[:game_path], only: /\.yaml$/, force_polling: true) do |modified , added|
   unless added.nil? or added.empty?
    $logger.info("Found YAML file(s) for processing")
     begin
-      added.each do |x|
-         $logger.info("Processing file #{x}")  
-         game = YAML.load_file(x.to_s)
+      Parallel.each(added) do |game_file|
+         $logger.info("Processing file #{game_file}")  
+         game = YAML.load_file(game_file.to_s)
          process_game(game)
          done_file = File.open(Dir.pwd + settings[:game_path])
-         File.rename(x.to_s, x.to_s + ".done")
+         File.rename(game_file.to_s, game_file.to_s + ".done")
       end
     rescue Errno::ENOENT => e
       $logger.fatal("Unable to open game file at #{added.first} #{e}")
