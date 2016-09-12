@@ -85,15 +85,15 @@ def match_to_json(match)
           }
       }
 
-  # If it's a run out we need which batsman was run out
-  if (match["type"]["eventType"] == "run out")
+  # If it's a run out, timed out or obstruction we need which batsman was run out
+  if (match["type"]["eventType"] == "runOut" or match["type"]["eventType"] == "timedOut" or match["type"]["eventType"] == "obstruction")
     output["batsman"] = {
       "id" => match["batsman_out"]["id"],
       "name" => "#{match["batsman_out"]["name"]}"
     }
   end
 
-  if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
+  If (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
       output["fielder"] = {
              "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
