@@ -93,12 +93,13 @@ def match_to_json(match)
     }
   end
 
-  If (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
+  if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
       output["fielder"] = {
              "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
            }
-    end
+  end
+
     return output
 end
 
@@ -289,7 +290,7 @@ def process_game(game)
             "striker" => striker,
             "non_striker" => non_striker,
             "bowler" => bowler,
-            "fielder" => fielder
+            "fielder" => fielder,
             "batsman_out" => batsman_out
           }
 
