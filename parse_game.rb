@@ -85,7 +85,15 @@ def match_to_json(match)
           }
       }
 
-    if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
+  # If it's a run out we need which batsman was run out
+  if (match["type"]["eventType"] == "run out")
+    output["batsman"] = {
+      "id" => match["batsman_out"]["id"],
+      "name" => "#{match["batsman_out"]["name"]}"
+    }
+  end
+
+  if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
       output["fielder"] = {
              "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
@@ -125,11 +133,15 @@ module CricketEntityParser
     striker = self.parse_player(deliveries["batsman"])
     non_striker = self.parse_player(deliveries["non_striker"])
     bowler = self.parse_player(deliveries["bowler"])
-    if deliveries.key?("wicket") and deliveries["wicket"].key?("fielders")
-      fielder = CricketEntityParser.parse_player(deliveries["wicket"]["fielders"].first)
+    # All wickets have a player out
+    if deliveries.key?("wicket")
+      # Some wickets have a fielders key
+      if deliveries["wicket"].key?("fielders")
+        fielder = CricketEntityParser.parse_player(deliveries["wicket"]["fielders"].first)
+     end
+      batsman_out = CricketEntityParser.parse_player(deliveries["wicket"]["player_out"])
     end
-
-    return striker, non_striker, bowler, fielder
+    return striker, non_striker, bowler, fielder, batsman_out
   end
 
   def self.parse_deliveries(deliveries)
@@ -256,8 +268,8 @@ def process_game(game)
           over = {"over" => overball[0]}
           ball = {"ball" => overball[1]}
 
-          striker, non_striker, bowler, fielder = CricketEntityParser.parse_players(delivery_values)
-            event_type = CricketEntityParser.parse_event_type(delivery_values)
+          striker, non_striker, bowler, fielder, batsman_out = CricketEntityParser.parse_players(delivery_values)
+          event_type = CricketEntityParser.parse_event_type(delivery_values)
           runs = CricketEntityParser.parse_runs(delivery_values)
 
           # Set the number of runs scored by the batsman, and fake the timestamp
@@ -277,7 +289,9 @@ def process_game(game)
             "striker" => striker,
             "non_striker" => non_striker,
             "bowler" => bowler,
-            "fielder" => fielder}
+            "fielder" => fielder
+            "batsman_out" => batsman_out
+          }
 
           # Create the string of the event and push to ES
           event = match_to_json(values)
