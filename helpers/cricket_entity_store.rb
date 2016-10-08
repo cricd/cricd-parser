@@ -22,7 +22,7 @@ module CricketEntityStore
     when 200...299
       @logger.info("Team created with name: #{name}")
       return JSON.parse(response.body)
-    when 400...500
+    when 400...499
       @logger.error("Failed to create team with a #{response.code} code - #{response.body}")
       return nil
     when 500...600
@@ -45,7 +45,7 @@ module CricketEntityStore
     when 200...299
       @logger.info("Team found with name: #{name}")
       return JSON.parse(response.body)
-    when 400...500
+    when 400...499
       @logger.error("Failed to get team with a #{response.code} code - #{response.body}")
       return nil
     when 500...600
@@ -72,14 +72,14 @@ module CricketEntityStore
     when 200...299
       @logger.info("Match found between #{home_team} and #{away_team} on #{start_date}")
       return JSON.parse(response.body)
-    when 400...500
+    when 400...499
       @logger.error("Failed to get match with a #{response.code} code - #{response.body}")
       return nil
     when 500...600
-      @logger.error("Failed to get match with a #{response.code} code")
+      @logger.error("Failed to get match with a #{response.code} code - #{response.body}")
       return nil
     else
-      @logger.error("Unknown response #{response.code} code")
+      @logger.error("Unknown response #{response.code} code - #{response.body}")
       return nil
     end
   end
@@ -99,7 +99,7 @@ module CricketEntityStore
     when 200...299
       @logger.info("Match created between #{home_team} and #{away_team} on #{start_date}")
       return JSON.parse(response.body)
-    when 400...500
+    when 400...499
       @logger.error("Failed to get match with a #{response.code} code - #{response.body}")
       return nil
     when 500...600
@@ -111,10 +111,10 @@ module CricketEntityStore
     end
   end
 
-  def self.create_player(name)
+  def self.create_player(name, team)
     @logger.info("Trying to create player with name #{name}")
     response = HTTParty.post("#{@url}/players",
-                           :body => {"name" => "#{name}"}.to_json,
+                           :body => {"name" => "#{name}", "teams" => team}.to_json,
                            :headers => { 'Content-Type' => 'application/json'},
                            :timeout => 1
                           )
@@ -122,7 +122,7 @@ module CricketEntityStore
     when 200...299
       @logger.info("Player created with name: #{name}")
       return JSON.parse(response.body)
-    when 400...500
+    when 400...499
       @logger.error("Failed to create player with a #{response.code} code - #{response.body}")
       return nil
     when 500...600
@@ -145,7 +145,7 @@ module CricketEntityStore
     when 200...299
       @logger.info("Player found with name: #{name}")
       return JSON.parse(response.body)
-    when 400...500
+    when 400...499
       @logger.error("Failed to get player with a #{response.code} code - #{response.body}")
       return nil
     when 500...600

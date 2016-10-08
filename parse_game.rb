@@ -94,12 +94,21 @@ def match_to_json(match)
   end
 
   if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
+
+    if match["fielder"].nil?
+      puts match
+      output["fielder"] = {
+        "id" => match["bowler"]["id"],
+        "name" => "#{match["bowler"]["name"]}"
+      }
+      puts "caught and bowled"
+    else
       output["fielder"] = {
              "id" => match["fielder"]["id"],
              "name"=> "#{match["fielder"]["name"]}"
-           }
+      }
+    end
   end
-
     return output
 end
 
@@ -110,7 +119,7 @@ module CricketEntityParser
     # If we didn't have this team stored, create it and then push to ES
     if found_team.nil? || found_team.empty?
       new_team = CricketEntityStore.create_team(team)
-      return {"id" => new_team["id"], "name" => new_team["name"]}
+      return {"id w" => new_team["id"], "name" => new_team["name"]}
     else
       return {"id" => found_team.first["id"], "name" => found_team.first["name"]}
     end
@@ -120,27 +129,27 @@ module CricketEntityParser
     return {"team" => innings.first["team"], "deliveries" => innings.first["deliveries"]}
   end
 
-  def self.parse_player(player)
+  def self.parse_player(player, team)
     found_player = CricketEntityStore.get_player(player)
     if found_player.nil? || found_player.empty?
-      new_player = CricketEntityStore.create_player(player)
+      new_player = CricketEntityStore.create_player(player, team["id"])
       return {"id" => new_player["id"], "name" => new_player["name"]}
     else
       return {"id" => found_player.first["id"], "name" => found_player.first["name"]}
     end
   end
 
-  def self.parse_players(deliveries)
-    striker = self.parse_player(deliveries["batsman"])
-    non_striker = self.parse_player(deliveries["non_striker"])
-    bowler = self.parse_player(deliveries["bowler"])
+  def self.parse_players(deliveries, batting_team, fielding_team)
+    striker = self.parse_player(deliveries["batsman"], batting_team)
+    non_striker = self.parse_player(deliveries["non_striker"], batting_team)
+    bowler = self.parse_player(deliveries["bowler"], fielding_team)
     # All wickets have a player out
     if deliveries.key?("wicket")
       # Some wickets have a fielders key
       if deliveries["wicket"].key?("fielders")
-        fielder = CricketEntityParser.parse_player(deliveries["wicket"]["fielders"].first)
+        fielder = CricketEntityParser.parse_player(deliveries["wicket"]["fielders"].first, fielding_team)
      end
-      batsman_out = CricketEntityParser.parse_player(deliveries["wicket"]["player_out"])
+      batsman_out = CricketEntityParser.parse_player(deliveries["wicket"]["player_out"], batting_team)
     end
     return striker, non_striker, bowler, fielder, batsman_out
   end
@@ -269,7 +278,7 @@ def process_game(game)
           over = {"over" => overball[0]}
           ball = {"ball" => overball[1]}
 
-          striker, non_striker, bowler, fielder, batsman_out = CricketEntityParser.parse_players(delivery_values)
+          striker, non_striker, bowler, fielder, batsman_out = CricketEntityParser.parse_players(delivery_values, batting_team, fielding_team)
           event_type = CricketEntityParser.parse_event_type(delivery_values)
           runs = CricketEntityParser.parse_runs(delivery_values)
 
