@@ -96,7 +96,6 @@ def match_to_json(match)
   if (match["type"]["eventType"] == "run out" or match["type"]["eventType"] == "stumped" or match["type"]["eventType"] == "caught")
 
     if match["fielder"].nil?
-      puts match
       output["fielder"] = {
         "id" => match["bowler"]["id"],
         "name" => "#{match["bowler"]["name"]}"
@@ -184,14 +183,7 @@ module CricketEntityParser
   end
 
   def self.parse_match(match_metadata)
-    found_match = CricketEntityStore.get_match(
-    match_metadata["teams"][0],
-    match_metadata["teams"][1],
-    match_metadata["match_type"].downcase == "test" ? 2 : 1,
-    match_metadata["overs"],
-    match_metadata["dates"].first)
-    if found_match.nil? || found_match.empty?
-      # Create a match ID
+      # Get or create a match ID
       new_match = CricketEntityStore.create_match(
         match_metadata["teams"][0],
         match_metadata["teams"][1],
@@ -205,9 +197,6 @@ module CricketEntityParser
         return nil
       end
       return match = {"match" => new_match["id"]}
-    else
-      return match = {"match" => found_match["id"]}
-    end
   end
 end
 # Get the JSON schema

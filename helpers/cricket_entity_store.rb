@@ -17,7 +17,7 @@ module CricketEntityStore
                   :body => {"name" => "#{name}"}.to_json,
                   :headers => { 'Content-Type' => 'application/json'},
                   :timeout => 1
-                  )
+                            )
     case response.code
     when 200...299
       @logger.info("Team created with name: #{name}")
@@ -41,7 +41,7 @@ module CricketEntityStore
                              :headers => { 'Content-Type' => 'application/json'},
                              :timeout => 1
                            )
-    case response.code
+   case response.code
     when 200...299
       @logger.info("Team found with name: #{name}")
       return JSON.parse(response.body)
@@ -58,16 +58,16 @@ module CricketEntityStore
   end
 
   def self.get_match(home_team, away_team, number_of_innings, limited_overs, start_date)
-    @logger.info("Trying to get match between #{home_team} and #{away_team} on #{start_date}")
+    @logger.info("Trying to get match between #{home_team} and #{away_team} on #{start_date} with number of innings #{number_of_innings} and limited overs #{limited_overs}")
     response = HTTParty.get("#{@url}/matches",
-                              :query => {'homeTeam' => home_team,
-                                         'awayTeam' => away_team,
+                              :query => {'homeTeam' => home_team["id"],
+                                         'awayTeam' => away_team["id"],
                                          'numberOfInnings' => number_of_innings,
                                          'limitedOvers' => limited_overs,
                                          'startDate' => start_date},
                               :headers => { 'Content-Type' => 'application/json'},
                               :timeout => 1
-                             )
+                           )
     case response.code
     when 200...299
       @logger.info("Match found between #{home_team} and #{away_team} on #{start_date}")
@@ -87,14 +87,14 @@ module CricketEntityStore
   def self.create_match(home_team, away_team, number_of_innings, limited_overs, start_date)
     @logger.info("Trying to get create between #{home_team} and #{away_team} on #{start_date}")
     response = HTTParty.post("#{@url}/matches",
-                               :body => {'homeTeam' => home_team,
-                                          'awayTeam' => away_team,
+                               :body => {'homeTeam' => home_team["id"],
+                                          'awayTeam' => away_team["id"],
                                           'numberOfInnings' => number_of_innings,
                                           'limitedOvers' => limited_overs,
                                           'startDate' => start_date}.to_json,
                                :headers => { 'Content-Type' => 'application/json'},
                                :timeout => 1
-                              )
+                            )
     case response.code
     when 200...299
       @logger.info("Match created between #{home_team} and #{away_team} on #{start_date}")
