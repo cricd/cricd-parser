@@ -118,7 +118,7 @@ module CricketEntityParser
     # If we didn't have this team stored, create it and then push to ES
     if found_team.nil? || found_team.empty?
       new_team = CricketEntityStore.create_team(team)
-      return {"id w" => new_team["id"], "name" => new_team["name"]}
+      return {"id" => new_team["id"], "name" => new_team["name"]}
     else
       return {"id" => found_team.first["id"], "name" => found_team.first["name"]}
     end
