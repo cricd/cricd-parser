@@ -100,10 +100,10 @@ module CricketEntityStore
       @logger.info("Match created between #{home_team} and #{away_team} on #{start_date}")
       return JSON.parse(response.body)
     when 400...499
-      @logger.error("Failed to get match with a #{response.code} code - #{response.body}")
+      @logger.error("Failed to create match with a #{response.code} code - #{response.body}")
       return nil
     when 500...600
-      @logger.error("Failed to get match with a #{response.code} code")
+      @logger.error("Failed to create match with a #{response.code} code")
       return nil
     else
       @logger.error("Unknown response #{response.code} code")
